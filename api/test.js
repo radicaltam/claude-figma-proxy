@@ -4,7 +4,6 @@ export default function handler(req, res) {
   res.json({ 
     message: 'Claude proxy is working!',
     timestamp: new Date().toISOString(),
-    hasApiKey: !!process.env.CLAUDE_API_KEY,
-    environment: process.env.NODE_ENV || 'development'
+    hasApiKey: !!process.env.CLAUDE_API_KEY
   });
 }

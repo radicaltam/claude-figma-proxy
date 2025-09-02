@@ -1,10 +1,13 @@
 // /api/claude.js - Fixed version with proper CORS handling
 
 export default async function handler(req, res) {
-  // Add CORS headers for Figma plugin access
+  // Enhanced CORS headers for Figma plugin environment
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'false');
+  res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' *; connect-src *;");
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   
   // Handle preflight requests
   if (req.method === 'OPTIONS') {

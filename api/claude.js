@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // CORS headers for Figma plugin
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -15,7 +14,7 @@ export default async function handler(req, res) {
   }
   
   try {
-    const { prompt, model = 'claude-3-sonnet-20240229', max_tokens = 1000 } = req.body;
+    const { prompt, max_tokens = 1000 } = req.body;
     
     if (!prompt) {
       res.status(400).json({ error: 'Prompt is required' });
@@ -27,8 +26,6 @@ export default async function handler(req, res) {
       return;
     }
     
-    console.log('Calling Claude API for prompt:', prompt.substring(0, 100));
-    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -37,7 +34,7 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: model,
+        model: 'claude-3-sonnet-20240229',
         max_tokens: max_tokens,
         messages: [{ role: 'user', content: prompt }]
       })
@@ -46,12 +43,10 @@ export default async function handler(req, res) {
     const data = await response.json();
     
     if (!response.ok) {
-      console.error('Claude API error:', data);
       res.status(response.status).json(data);
       return;
     }
     
-    console.log('Claude API success');
     res.json(data);
     
   } catch (error) {

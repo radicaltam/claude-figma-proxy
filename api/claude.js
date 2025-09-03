@@ -1,76 +1,90 @@
-// /api/claude.js - Complete Vercel proxy with proper CORS and CSP headers
+// /api/claude.js - Working Vercel serverless function
 
 export default async function handler(req, res) {
-  console.log('Claude Proxy - Incoming request:', req.method, req.url);
+  console.log('Claude API Handler - Request received:', req.method);
   
-  // Comprehensive CORS and CSP headers to fix Figma plugin CSP issues
+  // Set comprehensive CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin');
   res.setHeader('Access-Control-Max-Age', '86400');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; connect-src *; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; font-src *; frame-src *;");
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=*, microphone=*, geolocation=*');
+  res.setHeader('Content-Type', 'application/json');
   
   // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
-    console.log('Claude Proxy - Handling OPTIONS preflight');
-    res.status(200).end();
-    return;
+    console.log('Handling OPTIONS preflight request');
+    return res.status(200).end();
   }
   
-  // Only allow POST requests for Claude API
+  // Only allow POST requests
   if (req.method !== 'POST') {
-    console.log('Claude Proxy - Method not allowed:', req.method);
-    res.status(405).json({ 
+    console.log('Method not allowed:', req.method);
+    return res.status(405).json({ 
       success: false, 
       error: 'Method not allowed. Use POST.' 
     });
-    return;
   }
   
   try {
-    // Validate request body
+    // Debug environment variables
+    console.log('Environment check:', {
+      hasClaudeKey: !!process.env.CLAUDE_API_KEY,
+      nodeEnv: process.env.NODE_ENV,
+      keyLength: process.env.CLAUDE_API_KEY ? process.env.CLAUDE_API_KEY.length : 0
+    });
+    
+    // Get Claude API key from environment
+    const claudeApiKey = process.env.CLAUDE_API_KEY;
+    
+    if (!claudeApiKey) {
+      console.error('CLAUDE_API_KEY environment variable not found');
+      return res.status(500).json({
+        success: false,
+        error: 'API key not configured',
+        debug: 'CLAUDE_API_KEY environment variable is missing'
+      });
+    }
+    
+    if (!claudeApiKey.startsWith('sk-ant-')) {
+      console.error('Invalid API key format');
+      return res.status(500).json({
+        success: false,
+        error: 'Invalid API key format',
+        debug: 'API key should start with sk-ant-'
+      });
+    }
+    
+    // Parse request body
     const { prompt, context, format } = req.body;
     
     if (!prompt) {
-      console.log('Claude Proxy - Missing prompt');
-      res.status(400).json({ 
-        success: false, 
-        error: 'Missing required field: prompt' 
+      console.log('Missing prompt in request');
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: prompt'
       });
-      return;
     }
     
-    console.log('Claude Proxy - Processing request for context:', context);
+    console.log('Processing Claude request:', {
+      context: context || 'none',
+      format: format || 'none',
+      promptLength: prompt.length
+    });
     
-    // Get Claude API key from environment variables
-    const claudeApiKey = process.env.CLAUDE_API_KEY;
-    if (!claudeApiKey) {
-      console.error('Claude Proxy - Missing CLAUDE_API_KEY environment variable');
-      res.status(500).json({ 
-        success: false, 
-        error: 'Server configuration error: Missing API key' 
-      });
-      return;
-    }
-    
-    // Prepare Claude API request
-    const claudeRequest = {
-      model: "claude-3-sonnet-20240229", // or your preferred model
+    // Prepare Claude API request payload
+    const claudePayload = {
+      model: 'claude-3-haiku-20240307', // Fast and cost-effective model
       max_tokens: 1000,
       temperature: 0.7,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: prompt
         }
       ]
     };
     
-    console.log('Claude Proxy - Calling Claude API...');
+    console.log('Calling Claude API...');
     
     // Call Claude API
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
@@ -80,23 +94,29 @@ export default async function handler(req, res) {
         'x-api-key': claudeApiKey,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify(claudeRequest)
+      body: JSON.stringify(claudePayload)
     });
+    
+    console.log('Claude API response status:', claudeResponse.status);
     
     if (!claudeResponse.ok) {
       const errorText = await claudeResponse.text();
-      console.error('Claude Proxy - Claude API error:', claudeResponse.status, errorText);
-      
-      res.status(claudeResponse.status).json({
-        success: false,
-        error: `Claude API error: ${claudeResponse.status} ${claudeResponse.statusText}`,
-        details: errorText
+      console.error('Claude API error:', {
+        status: claudeResponse.status,
+        statusText: claudeResponse.statusText,
+        error: errorText
       });
-      return;
+      
+      return res.status(claudeResponse.status).json({
+        success: false,
+        error: `Claude API error: ${claudeResponse.status}`,
+        details: errorText,
+        debug: 'Check your Claude API key and quota'
+      });
     }
     
     const claudeData = await claudeResponse.json();
-    console.log('Claude Proxy - Claude API success');
+    console.log('Claude API success - response received');
     
     // Extract content from Claude response
     let content = '';
@@ -105,41 +125,53 @@ export default async function handler(req, res) {
     }
     
     if (!content) {
-      console.log('Claude Proxy - No content in Claude response');
-      res.status(200).json({
+      console.log('No content in Claude response');
+      return res.status(200).json({
         success: false,
-        error: 'No content generated',
-        content: null
+        error: 'No content generated by Claude',
+        debug: 'Claude returned empty response'
       });
-      return;
     }
     
-    // Try to parse as JSON if format is structured
-    let parsedContent = content;
+    // Process content based on format
+    let processedContent = content;
+    
     if (format === 'structured') {
       try {
-        parsedContent = JSON.parse(content);
-        console.log('Claude Proxy - Successfully parsed structured JSON response');
-      } catch (e) {
-        console.log('Claude Proxy - Could not parse as JSON, returning raw text');
-        // Keep as text, will be processed on client side
+        // Try to parse as JSON
+        processedContent = JSON.parse(content);
+        console.log('Successfully parsed structured JSON response');
+      } catch (parseError) {
+        console.log('Could not parse as JSON, returning raw text');
+        // Keep as raw text - will be processed on client side
+        processedContent = content;
       }
     }
     
     // Return successful response
-    res.status(200).json({
+    const response = {
       success: true,
-      content: parsedContent,
+      content: processedContent,
       usage: claudeData.usage || null,
-      model: claudeData.model || null
-    });
+      model: claudeData.model || null,
+      debug: 'Response generated successfully'
+    };
+    
+    console.log('Returning successful response');
+    return res.status(200).json(response);
     
   } catch (error) {
-    console.error('Claude Proxy - Unexpected error:', error);
-    res.status(500).json({
+    console.error('Unexpected error in Claude handler:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    return res.status(500).json({
       success: false,
       error: 'Internal server error',
-      message: error.message
+      message: error.message,
+      debug: 'Check server logs for details'
     });
   }
 }

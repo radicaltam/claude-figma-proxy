@@ -1,17 +1,17 @@
-// api/claude.js - WORKING PROXY CODE
+// api/claude.js - SECURE VERSION (Environment Variables Only)
 export default async function handler(req, res) {
   console.log(`[${new Date().toISOString()}] ${req.method} request received`);
   
-  // CORS headers - EXACTLY what's needed
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+  
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-
+  
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -20,14 +20,15 @@ export default async function handler(req, res) {
   try {
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
-    // Get API key from environment
+    // SECURE: Only use API key from environment variables
     const apiKey = process.env.CLAUDE_API_KEY;
-    console.log('API key present:', !!apiKey);
     
     if (!apiKey) {
-      console.error('CLAUDE_API_KEY not found in environment');
-      return res.status(500).json({ error: 'API key not configured' });
+      console.error('CLAUDE_API_KEY not found in environment variables');
+      return res.status(500).json({ error: 'Server configuration error: API key not configured' });
     }
+
+    console.log('Using API key from environment (secure method)');
 
     // Validate request body
     const { model, messages, max_tokens, temperature } = req.body;
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
 
     // Prepare Claude API request
     const claudeRequest = {
-      model: model || 'claude-3-haiku-20240307', // Use Haiku as default (cheaper, more reliable)
+      model: model || 'claude-3-haiku-20240307',
       max_tokens: max_tokens || 1000,
       messages: messages,
       temperature: temperature || 0.7
@@ -76,12 +77,8 @@ export default async function handler(req, res) {
     const claudeData = await claudeResponse.json();
     console.log('Claude API success');
 
-    // Return in format expected by client
-    return res.status(200).json({
-      success: true,
-      content: claudeData.content?.[0]?.text || '',
-      rawResponse: claudeData
-    });
+    // Return raw Claude response
+    return res.status(200).json(claudeData);
 
   } catch (error) {
     console.error('Proxy error:', error);

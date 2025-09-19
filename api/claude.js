@@ -1,5 +1,5 @@
 // Claude API Proxy for Figma Plugins
-  // Accepts API key from request headers for client-side usage
+  // Updated with current Claude model names
 
   export default async function handler(req, res) {
     // Comprehensive CORS headers for Figma plugin compatibility
@@ -63,8 +63,11 @@
         });
       }
 
+      // Use current Claude model names (updated December 2024)
+      const validModel = model || 'claude-3-5-sonnet-20241022';
+
       console.log('Request validated:', {
-        model: model || 'claude-3-sonnet-20240229',
+        model: validModel,
         max_tokens: max_tokens || 1000,
         messageCount: messages.length,
         temperature: temperature || 0.8
@@ -72,13 +75,13 @@
 
       // Prepare Claude API request
       const claudeRequest = {
-        model: model || 'claude-3-sonnet-20240229',
+        model: validModel,
         max_tokens: max_tokens || 1000,
         messages: messages,
         temperature: temperature || 0.8
       };
 
-      console.log('Calling Claude API...');
+      console.log('Calling Claude API with model:', validModel);
 
       // Call Claude API
       const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {

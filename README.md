@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Claude API Proxy for Figma Plugins
 
 [![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/claude-figma-proxy)
@@ -100,3 +101,6 @@ npm run dev
 ---
 
 **Generated for Texas Health Resources Figma Plugin**
+=======
+# claude-figma-proxy
+>>>>>>> origin/main

@@ -1,5 +1,5 @@
 // Claude API Proxy for Figma Plugins
-  // Updated with current Claude model names
+  // Updated with correct current Claude model names
 
   export default async function handler(req, res) {
     // Comprehensive CORS headers for Figma plugin compatibility
@@ -63,8 +63,8 @@
         });
       }
 
-      // Use current Claude model names (updated December 2024)
-      const validModel = model || 'claude-3-5-sonnet-20241022';
+      // Use correct current Claude model names
+      const validModel = model || 'claude-3-5-sonnet-20240620';
 
       console.log('Request validated:', {
         model: validModel,

@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     console.log('Origin:', req.headers.origin);
     
     // Get API key from environment variable (secure server-side storage)
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_KEY || process.env.API_KEY;
 
     // Debug logging
     console.log('DEBUG: Environment variable check');
